@@ -1,0 +1,55 @@
+---
+{{- if .Values.serviceAccount.create -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: "custom:{{ include "ecr-token-refresher.fullname" . }}"
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "watch", "list", "create", "patch", "update"]
+- apiGroups: [""]
+  resources: ["namespaces","pods","services","deployments","jobs","cronjobs","events"]
+  verbs: ["get", "watch", "list"]
+{{- end }}
+---
+{{- if .Values.serviceAccount.create -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: "local:{{ include "ecr-token-refresher.fullname" . }}"
+  namespace: {{ .Release.Namespace }}
+rules:
+- apiGroups: [""]
+  resources: ["*"]
+  verbs: ["get", "watch", "list", "create", "patch", "update", "delete"]
+{{- end }}
+---
+{{- if .Values.serviceAccount.create -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: "{{ include "ecr-token-refresher.fullname" . }}"
+subjects:
+- kind: ServiceAccount
+  name: {{ include "ecr-token-refresher.serviceAccountName" . }}
+  namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: ClusterRole
+  name: "custom:{{ include "ecr-token-refresher.fullname" . }}"
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}
+---
+{{- if .Values.serviceAccount.create -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: "{{ include "ecr-token-refresher.fullname" . }}"
+subjects:
+- kind: ServiceAccount
+  name: {{ include "ecr-token-refresher.serviceAccountName" . }}
+roleRef:
+  kind: Role
+  name: "local:{{ include "ecr-token-refresher.fullname" . }}"
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}

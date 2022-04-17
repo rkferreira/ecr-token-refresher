@@ -1,0 +1,40 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "ecr-token-refresher.fullname" . }}
+  labels:
+    {{- include "ecr-token-refresher.labels" . | nindent 4 }}
+spec:
+  schedule: "{{ .Values.cron.schedule }}"
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          {{- with .Values.podAnnotations }}
+          annotations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          labels:
+            {{- include "ecr-token-refresher.selectorLabels" . | nindent 12 }}
+        spec:
+          serviceAccountName: {{ include "ecr-token-refresher.serviceAccountName" . }}
+          automountServiceAccountToken: true
+          containers:
+          - name: {{ include "ecr-token-refresher.fullname" . }} 
+            image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+            imagePullPolicy: IfNotPresent
+            resources:
+              limits:
+                cpu: "{{ .Values.resources.limits.cpu }}"
+                memory: "{{ .Values.resources.limits.memory }}"
+              requests:
+                cpu: "{{ .Values.resources.requests.cpu }}"
+                memory: "{{ .Values.resources.requests.memory }}"
+            env:
+            {{- range $key, $value := .Values.customEnv }}
+            - name: {{ $key | quote }}
+              value: {{ $value | quote }}
+            {{- end }}
+            command:
+            - /app/ecr-token-refresher
+          restartPolicy: OnFailure
